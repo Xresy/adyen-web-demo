@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful - Adyen Web Demo</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .success-icon {
+            color: #28a745;
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        .result-item {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="success-icon">✓</div>
+            <h1>Payment Successful</h1>
+        </header>
+
+        <div class="payment-form">
+            <div id="result-container">
+                <p class="success-message">Your payment was processed successfully!</p>
+                <div id="payment-details"></div>
+            </div>
+
+            <a href="/" class="btn">Make Another Payment</a>
+        </div>
+    </div>
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Payment Successful</h1>
+        </header>
+
+        <div class="success-message">
+            <p>Your payment has been processed successfully.</p>
+            <div id="payment-result" class="result-details"></div>
+            <a href="/" class="btn">Return to Home</a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const resultElement = document.getElementById('payment-result');
+            const paymentResult = sessionStorage.getItem('paymentResult');
+
+            if (paymentResult) {
+                try {
+                    const result = JSON.parse(paymentResult);
+                    resultElement.innerHTML = `<p>Result Code: ${result.resultCode || 'N/A'}</p>`;
+                    if (result.merchantReference) {
+                        resultElement.innerHTML += `<p>Reference: ${result.merchantReference}</p>`;
+                    }
+                } catch (e) {
+                    console.error('Error parsing payment result', e);
+                }
+
+                // Clear the stored result
+                sessionStorage.removeItem('paymentResult');
+            }
+        });
+    </script>
+</body>
+</html>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const resultContainer = document.getElementById('payment-details');
+            const resultData = sessionStorage.getItem('paymentResult');
+
+            if (resultData) {
+                try {
+                    const result = JSON.parse(resultData);
+                    const resultHtml = `
+                        <div class="result-item">
+                            <strong>Result Code:</strong> ${result.resultCode || 'Unknown'}
+                        </div>
+                        <div class="result-item">
+                            <strong>PSP Reference:</strong> ${result.pspReference || 'Not provided'}
+                        </div>
+                    `;
+                    resultContainer.innerHTML = resultHtml;
+                } catch (e) {
+                    console.error('Error parsing payment result', e);
+                    resultContainer.innerHTML = '<p>Error displaying payment details</p>';
+                }
+            } else {
+                resultContainer.innerHTML = '<p>No payment details available</p>';
+            }
+        });
+    </script>
+</body>
+</html>

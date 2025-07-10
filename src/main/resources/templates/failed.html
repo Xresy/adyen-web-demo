@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Failed - Adyen Web Demo</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .error-icon {
+            color: #dc3545;
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="error-icon">✗</div>
+            <h1>Payment Failed</h1>
+        </header>
+
+        <div class="payment-form">
+            <div id="result-container">
+                <p class="error-message">Your payment could not be processed.</p>
+                <div id="error-details" class="result-details"></div>
+            </div>
+
+            <a href="/" class="btn">Try Again</a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const errorDetails = document.getElementById('error-details');
+            const resultData = sessionStorage.getItem('paymentResult');
+
+            if (resultData) {
+                try {
+                    const result = JSON.parse(resultData);
+                    let errorMessage = 'Unknown error';
+
+                    if (result.error) {
+                        errorMessage = result.error;
+                    } else if (result.refusalReason) {
+                        errorMessage = result.refusalReason;
+                    } else if (result.resultCode) {
+                        errorMessage = `Payment ${result.resultCode}`;
+                    }
+
+                    errorDetails.innerHTML = `<p>${errorMessage}</p>`;
+                } catch (e) {
+                    console.error('Error parsing payment result', e);
+                    errorDetails.innerHTML = '<p>Error displaying payment details</p>';
+                }
+
+                // Clear the stored result
+                sessionStorage.removeItem('paymentResult');
+            } else {
+                errorDetails.innerHTML = '<p>No error details available</p>';
+            }
+        });
+    </script>
+</body>
+</html>

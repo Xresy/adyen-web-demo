@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="client-key" th:content="${clientKey}">
+    <title>Adyen Web Integration</title>
+    <link rel="stylesheet" href="https://checkoutshopper-test.cdn.adyen.com/checkoutshopper/sdk/6.6.0/adyen.css"
+          integrity="sha384-UAD/QSv1wQyfA60svLYxJ0OJAPl9TpkksO+HEOUX8YJcD+MYzNmn+q4XL7YBeHcr"
+          crossorigin="anonymous">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Adyen Web Demo</h1>
+        </header>
+
+        <div class="payment-form">
+            <div class="form-group">
+                <label for="amount">Amount</label>
+                <input type="number" id="amount" value="1000" min="1">
+            </div>
+
+            <div class="form-group">
+                <label for="currency">Currency</label>
+                <select id="currency">
+                    <option value="EUR">EUR</option>
+                    <option value="USD">USD</option>
+                    <option value="GBP">GBP</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="countryCode">Country</label>
+                <select id="countryCode">
+                    <option value="NL">Netherlands</option>
+                    <option value="US">United States</option>
+                    <option value="GB">United Kingdom</option>
+                </select>
+            </div>
+
+            <div class="form-group checkbox">
+                <input type="checkbox" id="enableRecurring">
+                <label for="enableRecurring">Enable recurring payments</label>
+            </div>
+
+            <div class="form-group" id="shopperReferenceGroup" style="display: none;">
+                <label for="shopperReference">Shopper Reference</label>
+                <input type="text" id="shopperReference" placeholder="Enter a unique shopper reference">
+            </div>
+
+            <button id="pay-button" class="btn">Proceed to Payment</button>
+        </div>
+
+        <div id="loading" class="loading">Loading dropin...</div>
+        <div id="error" class="error"></div>
+        <div id="payment-container" class="payment-container"></div>
+    </div>
+
+    <script src="https://checkoutshopper-test.cdn.adyen.com/checkoutshopper/sdk/6.6.0/adyen.js"
+            integrity="sha384-Oa2agnE48SFtDpzmEK8mbhbmEA1X4WH6afLBbypUhFU8oDhJWAIGvLQTBrqgls4A"
+            crossorigin="anonymous"></script>
+    <script src="/js/adyen-payment.js"></script>
+</body>
+</html>
