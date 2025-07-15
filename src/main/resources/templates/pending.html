@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Pending - Adyen Web Demo</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .pending-icon {
+            color: #00a1b2;
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        .payment-details {
+            margin: 20px 0;
+            background: #f0f8ff;
+            padding: 20px;
+            border-radius: 5px;
+            border-left: 4px solid #00a1b2;
+        }
+        .payment-status {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 161, 178, 0.2);
+            border-radius: 50%;
+            border-top: 4px solid #00a1b2;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="pending-content">
+            <div class="pending-icon">⏳</div>
+            <h1>Payment Processing</h1>
+            <p>Your payment is being processed. Please do not close this page.</p>
+
+            <div class="payment-status">
+                <div class="spinner"></div>
+                <p>We are waiting for confirmation from your payment provider.</p>
+            </div>
+
+            <!-- Payment Details -->
+            <div class="payment-details" th:if="${paymentResult != null}">
+                <h2>Payment Details</h2>
+                <table>
+                    <tr>
+                        <td><strong>Status:</strong></td>
+                        <td th:text="${paymentResult.resultCode}">PENDING</td>
+                    </tr>
+                    <tr>
+                        <td><strong>PSP Reference:</strong></td>
+                        <td th:text="${paymentResult.pspReference}">8123456789012345</td>
+                    </tr>
+                    <tr th:if="${paymentResult.merchantReference != null}">
+                        <td><strong>Merchant Reference:</strong></td>
+                        <td th:text="${paymentResult.merchantReference}">Order-123456</td>
+                    </tr>
+                </table>
+            </div>
+
+            <p>You will receive a confirmation when the payment is complete.</p>
+            <a href="/" class="btn">Return to Homepage</a>
+        </div>
+    </div>
+</body>
+</html>

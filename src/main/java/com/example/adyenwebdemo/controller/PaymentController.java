@@ -1,8 +1,8 @@
 package com.example.adyenwebdemo.controller;
 
-import com.adyen.model.checkout.CreateCheckoutSessionRequest;
-import com.adyen.model.checkout.CreateCheckoutSessionResponse;
 import com.adyen.service.exception.ApiException;
+import com.example.adyenwebdemo.model.RedirectDetailsRequest;
+import com.example.adyenwebdemo.model.RedirectDetailsResponse;
 import com.example.adyenwebdemo.model.PaymentRequest;
 import com.example.adyenwebdemo.model.PaymentSessionResponse;
 import com.example.adyenwebdemo.service.PaymentService;
@@ -38,10 +38,51 @@ public class PaymentController {
     }
 
     /**
-     * Renders the payment success page
+     * Handles redirects from Adyen payment flow
+     * This endpoint processes the redirectResult parameter
      */
     @GetMapping("/success")
-    public String success() {
+    public String handleRedirect(
+            @RequestParam(value = "redirectResult", required = false) String redirectResult,
+            Model model) {
+
+        // If there's a redirectResult, we need to handle it
+        if (redirectResult != null && !redirectResult.isEmpty()) {
+            try {
+                log.info("Received redirect from Adyen with redirectResult parameter");
+
+                // Create a redirect details request
+                RedirectDetailsRequest detailsRequest = RedirectDetailsRequest.builder()
+                        .redirectResult(redirectResult)
+                        .build();
+
+                // Submit details to Adyen
+                RedirectDetailsResponse response = paymentService.submitPaymentDetails(detailsRequest);
+                log.info("Payment details processed: {}", response);
+
+                // Add payment result to model
+                model.addAttribute("paymentResult", response);
+
+                // Determine where to redirect based on result code
+                if (response.getResultCode() != null) {
+                    String resultCode = response.getResultCode().toUpperCase();
+                    if (resultCode.equals("AUTHORISED") || resultCode.equals("AUTHENTICATED")) {
+                        return "success";
+                    } else if (resultCode.equals("PENDING") || resultCode.equals("RECEIVED")) {
+                        return "pending";
+                    } else {
+                        model.addAttribute("error", "Payment was not successful: " + resultCode);
+                        return "failed";
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Error processing redirect result", e);
+                model.addAttribute("error", "Error processing payment: " + e.getMessage());
+                return "failed";
+            }
+        }
+
+        // If no redirectResult, just show success page
         return "success";
     }
 
@@ -51,6 +92,14 @@ public class PaymentController {
     @GetMapping("/failed")
     public String failed() {
         return "failed";
+    }
+
+    /**
+     * Renders the payment pending page
+     */
+    @GetMapping("/pending")
+    public String pending() {
+        return "pending";
     }
 
     /**

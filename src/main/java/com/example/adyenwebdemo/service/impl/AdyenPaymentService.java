@@ -3,10 +3,15 @@ package com.example.adyenwebdemo.service.impl;
 import com.adyen.model.checkout.Amount;
 import com.adyen.model.checkout.CreateCheckoutSessionRequest;
 import com.adyen.model.checkout.CreateCheckoutSessionResponse;
+import com.adyen.model.checkout.PaymentCompletionDetails;
+import com.adyen.model.checkout.PaymentDetailsRequest;
+import com.adyen.model.checkout.PaymentDetailsResponse;
 import com.adyen.model.RequestOptions;
 import com.adyen.service.checkout.PaymentsApi;
 import com.adyen.service.exception.ApiException;
 import com.example.adyenwebdemo.config.AdyenConfig;
+import com.example.adyenwebdemo.model.RedirectDetailsRequest;
+import com.example.adyenwebdemo.model.RedirectDetailsResponse;
 import com.example.adyenwebdemo.model.PaymentRequest;
 import com.example.adyenwebdemo.model.PaymentSessionResponse;
 import com.example.adyenwebdemo.service.PaymentService;
@@ -16,6 +21,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -46,10 +53,9 @@ public class AdyenPaymentService implements PaymentService {
 
         // Handle recurring payments if enabled
         if (paymentRequest.isEnableRecurring() && paymentRequest.getShopperReference() != null) {
-            sessionRequest.setShopperReference(paymentRequest.getShopperReference());
-            sessionRequest.setRecurringProcessingModel(CreateCheckoutSessionRequest.RecurringProcessingModelEnum.CARDONFILE);
+            sessionRequest.shopperReference(paymentRequest.getShopperReference());
+            sessionRequest.recurringProcessingModel(CreateCheckoutSessionRequest.RecurringProcessingModelEnum.CARDONFILE);
         }
-
 
         // Call Adyen API to create session
         CreateCheckoutSessionResponse response = paymentsApi.sessions(sessionRequest);
@@ -60,6 +66,42 @@ public class AdyenPaymentService implements PaymentService {
                 .sessionId(response.getId())
                 .sessionData(response.getSessionData())
                 .clientKey(clientKey)
+                .build();
+    }
+
+    @Override
+    public RedirectDetailsResponse submitPaymentDetails(RedirectDetailsRequest detailsRequest) throws IOException, ApiException {
+        log.info("Submitting payment details for redirect result");
+
+        // Create the details object using PaymentCompletionDetails
+        PaymentCompletionDetails paymentCompletionDetails = new PaymentCompletionDetails()
+            .redirectResult(detailsRequest.getRedirectResult());
+
+        // Create an Adyen PaymentDetailsRequest with the details
+        PaymentDetailsRequest adyenDetailsRequest = new PaymentDetailsRequest()
+            .details(paymentCompletionDetails);
+
+        // Add payment data if available
+        if (detailsRequest.getPaymentData() != null && !detailsRequest.getPaymentData().isEmpty()) {
+            adyenDetailsRequest.paymentData(detailsRequest.getPaymentData());
+        }
+
+        // Use idempotency key in the request options
+        RequestOptions requestOptions = new RequestOptions();
+        requestOptions.idempotencyKey(UUID.randomUUID().toString());
+
+        // Call Adyen API to get payment details
+        PaymentDetailsResponse response = paymentsApi.paymentsDetails(adyenDetailsRequest, requestOptions);
+        log.info("Payment details submitted successfully: {}, result: {}", 
+                response.getPspReference(),
+                response.getResultCode() != null ? response.getResultCode().toString() : "null");
+
+        // Map Adyen's response to our model - convert ResultCodeEnum to String
+        return RedirectDetailsResponse.builder()
+                .resultCode(response.getResultCode() != null ? response.getResultCode().toString() : null)
+                .pspReference(response.getPspReference())
+                .merchantReference(response.getMerchantReference())
+                .additionalData(response.getAdditionalData())
                 .build();
     }
 }

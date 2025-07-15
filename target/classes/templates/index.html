@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="client-key" th:content="${clientKey}">
-    <title>Adyen Web Integration</title>
+    <title>Adyen Web Integration - Green Theme</title>
     <link rel="stylesheet" href="https://checkoutshopper-test.cdn.adyen.com/checkoutshopper/sdk/6.6.0/adyen.css"
           integrity="sha384-UAD/QSv1wQyfA60svLYxJ0OJAPl9TpkksO+HEOUX8YJcD+MYzNmn+q4XL7YBeHcr"
           crossorigin="anonymous">
@@ -55,7 +55,17 @@
 
         <div id="loading" class="loading">Loading dropin...</div>
         <div id="error" class="error"></div>
-        <div id="payment-container" class="payment-container"></div>
+
+        <!-- Payment Modal -->
+        <div id="payment-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Complete Your Payment</h2>
+                    <span class="close-modal">&times;</span>
+                </div>
+                <div id="payment-container" class="payment-container"></div>
+            </div>
+        </div>
     </div>
 
     <script src="https://checkoutshopper-test.cdn.adyen.com/checkoutshopper/sdk/6.6.0/adyen.js"

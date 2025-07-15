@@ -6,24 +6,46 @@
     <title>Payment Failed - Adyen Web Demo</title>
     <link rel="stylesheet" href="/css/styles.css">
     <style>
-        .error-icon {
-            color: #dc3545;
+        .failed-icon {
+            color: #d10244;
             font-size: 64px;
             margin-bottom: 20px;
+        }
+        .error-details {
+            margin: 20px 0;
+            background: #fff0f0;
+            padding: 20px;
+            border-radius: 5px;
+            border-left: 4px solid #d10244;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <div class="error-icon">✗</div>
+        <div class="failed-content">
+            <div class="failed-icon">✕</div>
             <h1>Payment Failed</h1>
-        </header>
+            <p>We were unable to process your payment.</p>
 
-        <div class="payment-form">
-            <div id="result-container">
-                <p class="error-message">Your payment could not be processed.</p>
-                <div id="error-details" class="result-details"></div>
+            <!-- Server-side Error Details -->
+            <div class="error-details" th:if="${error != null}">
+                <h2>Error Details</h2>
+                <p th:text="${error}">Error message will appear here</p>
+            </div>
+
+            <!-- Server-side Payment Result -->
+            <div class="error-details" th:if="${paymentResult != null}">
+                <h2>Payment Result</h2>
+                <p><strong>Result Code:</strong> <span th:text="${paymentResult.resultCode}">REFUSED</span></p>
+                <p th:if="${paymentResult.pspReference != null}">
+                    <strong>PSP Reference:</strong> <span th:text="${paymentResult.pspReference}">8123456789012345</span>
+                </p>
+            </div>
+
+            <!-- Client-side Error Details (shown only if no server-side details) -->
+            <div id="client-error" class="error-details" style="display: none;">
+                <h2>Error Details</h2>
+                <p id="client-error-message"></p>
             </div>
 
             <a href="/" class="btn">Try Again</a>
@@ -31,35 +53,28 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const errorDetails = document.getElementById('error-details');
-            const resultData = sessionStorage.getItem('paymentResult');
+    document.addEventListener('DOMContentLoaded', () => {
+        // Check if we have server-side error details
+        const hasServerError = document.querySelector('.error-details') !== null;
 
-            if (resultData) {
-                try {
-                    const result = JSON.parse(resultData);
-                    let errorMessage = 'Unknown error';
+        // If no server-side error, check for client-side error
+        if (!hasServerError) {
+            const storedError = sessionStorage.getItem('paymentError');
+            if (storedError) {
+                const clientError = document.getElementById('client-error');
+                const clientErrorMessage = document.getElementById('client-error-message');
 
-                    if (result.error) {
-                        errorMessage = result.error;
-                    } else if (result.refusalReason) {
-                        errorMessage = result.refusalReason;
-                    } else if (result.resultCode) {
-                        errorMessage = `Payment ${result.resultCode}`;
-                    }
+                clientErrorMessage.textContent = storedError;
+                clientError.style.display = 'block';
 
-                    errorDetails.innerHTML = `<p>${errorMessage}</p>`;
-                } catch (e) {
-                    console.error('Error parsing payment result', e);
-                    errorDetails.innerHTML = '<p>Error displaying payment details</p>';
-                }
-
-                // Clear the stored result
-                sessionStorage.removeItem('paymentResult');
-            } else {
-                errorDetails.innerHTML = '<p>No error details available</p>';
+                // Clear the error from session storage
+                sessionStorage.removeItem('paymentError');
             }
-        });
+        }
+
+        // Always clear payment result from session storage
+        sessionStorage.removeItem('paymentResult');
+    });
     </script>
 </body>
 </html>

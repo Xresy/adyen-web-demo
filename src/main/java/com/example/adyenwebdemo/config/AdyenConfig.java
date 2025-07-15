@@ -29,7 +29,8 @@ public class AdyenConfig {
 
     @Bean
     public Client adyenClient() {
-        Client client = new Client(apiKey, Environment.valueOf(environment));
+        // In v39.0.0, the Client constructor and configuration is slightly different
+        Client client = new Client(apiKey, Environment.valueOf(environment.toUpperCase()));
         client.setApplicationName("Adyen Web Demo");
         return client;
     }

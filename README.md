@@ -9,7 +9,8 @@ A Spring Boot application demonstrating Adyen payment integration using the Adye
 - Session-based payment flow
 - Support for recurring payments
 - Clean separation of concerns (MVC pattern)
-- Modern, responsive UI
+- Modern, responsive UI with Adyen green theme
+- Modal-based drop-in payment experience
 
 ## Technology Stack
 
@@ -64,9 +65,15 @@ adyen.hmac.key=YOUR_HMAC_KEY
 2. Optional: Enable recurring payments and provide shopper reference
 3. Click "Proceed to Payment" button
 4. Backend creates Adyen payment session
-5. Frontend initializes Adyen Drop-in component with session data
+5. Frontend initializes Adyen Drop-in component with session data in a modal window
 6. User selects payment method and completes payment
-7. Result handling with success/failure pages
+7. For redirect payment methods (iDEAL, Sofort, etc.):
+   - User is redirected to payment provider's page
+   - After completion, user is redirected back with a `redirectResult` parameter
+   - The application handles this parameter via `/payments/details` endpoint
+   - Payment result is displayed based on the response
+8. For non-redirect methods, the result is handled directly within the drop-in component
+9. Final result shown on success/failure pages
 
 ## Development
 
