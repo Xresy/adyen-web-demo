@@ -132,10 +132,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     sessionStorage.setItem('paymentResult', JSON.stringify(result));
                     paymentModal.style.display = 'none';
 
-                    // Redirect based on result code
-                    if (result.resultCode === 'AUTHORISED') {
+                    // Redirect based on result code - case insensitive comparison
+                    const resultCodeUpper = result.resultCode ? result.resultCode.toUpperCase() : '';
+                    if (resultCodeUpper === 'AUTHORISED') {
                         window.location.href = '/success';
-                    } else if (result.resultCode === 'PENDING' || result.resultCode === 'RECEIVED') {
+                    } else if (resultCodeUpper === 'PENDING' || resultCodeUpper === 'RECEIVED') {
                         // Store pending info for pending page
                         sessionStorage.setItem('pendingPayment', JSON.stringify(result));
                         window.location.href = '/pending';
@@ -221,10 +222,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Store result in session storage
             sessionStorage.setItem('paymentResult', JSON.stringify(resultData));
 
-            // Redirect based on result
-            if (resultData.resultCode === 'AUTHORISED') {
+            // Redirect based on result - case insensitive comparison
+            const resultCodeUpper = resultData.resultCode ? resultData.resultCode.toUpperCase() : '';
+            if (resultCodeUpper === 'AUTHORISED' || resultCodeUpper === 'AUTHORISED') {
                 window.location.href = '/success';
-            } else if (resultData.resultCode === 'PENDING' || resultData.resultCode === 'RECEIVED') {
+            } else if (resultCodeUpper === 'PENDING' || resultCodeUpper === 'RECEIVED') {
                 window.location.href = '/pending';
             } else {
                 window.location.href = '/failed';
