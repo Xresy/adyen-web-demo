@@ -11,7 +11,7 @@ import java.util.Map;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RedirectDetailsResponse {
+public class AdyenPaymentDetailsResponse {
     private String resultCode;
     private String pspReference;
     private String merchantReference;

@@ -33,22 +33,94 @@
             <p>Your payment has been processed successfully!</p>
 
             <!-- Payment Result Details -->
-            <div class="payment-details" th:if="${paymentResult != null}">
+            <div class="payment-details">
                 <h2>Payment Details</h2>
-                <table>
-                    <tr>
+                <table id="payment-details-table">
+                    <!-- These rows will be shown only if paymentResult exists on server side -->
+                    <tr th:if="${paymentResult != null and paymentResult.resultCode != null}">
                         <td><strong>Result Code:</strong></td>
                         <td th:text="${paymentResult.resultCode}">AUTHORISED</td>
                     </tr>
-                    <tr>
+                    <tr th:if="${paymentResult != null and paymentResult.pspReference != null}">
                         <td><strong>PSP Reference:</strong></td>
                         <td th:text="${paymentResult.pspReference}">8123456789012345</td>
                     </tr>
-                    <tr th:if="${paymentResult.merchantReference != null}">
+                    <tr th:if="${paymentResult != null and paymentResult.merchantReference != null}">
                         <td><strong>Merchant Reference:</strong></td>
                         <td th:text="${paymentResult.merchantReference}">Order-123456</td>
                     </tr>
+                    <!-- If no server-side data, the table will be empty and filled by JavaScript -->
                 </table>
+
+                <!-- Direct script to handle payment details display -->
+                <script th:inline="javascript">
+                    document.addEventListener('DOMContentLoaded', function() {
+                        // Get payment data - first try server-side, then sessionStorage
+                        const serverData = /*[[${paymentResult}]]*/ null;
+                        const table = document.getElementById('payment-details-table');
+                        let paymentData = serverData;
+
+                        // Display additional data from server-side model if present
+                        if (serverData && serverData.additionalData) {
+                            displayAdditionalData(serverData.additionalData, table);
+                        }
+
+                        // If no server data present, try sessionStorage
+                        if (!table.querySelectorAll('tr').length) {
+                            const storedResult = sessionStorage.getItem('paymentResult');
+                            if (storedResult) {
+                                try {
+                                    paymentData = JSON.parse(storedResult);
+
+                                    // Display basic payment information
+                                    displayBasicPaymentInfo(paymentData, table);
+
+                                    // Display any additional data
+                                    if (paymentData.additionalData) {
+                                        displayAdditionalData(paymentData.additionalData, table);
+                                    }
+
+                                    // Clear storage after using it
+                                    sessionStorage.removeItem('paymentResult');
+                                } catch (err) {
+                                    console.error('Error parsing payment result:', err);
+                                }
+                            }
+                        }
+                    });
+
+                    // Helper function to display basic payment info
+                    function displayBasicPaymentInfo(data, table) {
+                        if (data.resultCode) {
+                            addTableRow(table, 'Result Code', data.resultCode);
+                        }
+                        if (data.pspReference) {
+                            addTableRow(table, 'PSP Reference', data.pspReference);
+                        }
+                        if (data.merchantReference) {
+                            addTableRow(table, 'Merchant Reference', data.merchantReference);
+                        }
+                    }
+
+                    // Helper function to display additional data
+                    function displayAdditionalData(additionalData, table) {
+                        for (const [key, value] of Object.entries(additionalData)) {
+                            if (key && value) {
+                                addTableRow(table, key, value);
+                            }
+                        }
+                    }
+
+                    // Helper function to add a table row
+                    function addTableRow(table, label, value) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><strong>${label}:</strong></td>
+                            <td>${value}</td>
+                        `;
+                        table.appendChild(row);
+                    }
+                </script>
             </div>
 
             <a href="/" class="btn">Return to Homepage</a>

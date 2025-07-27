@@ -40,14 +40,15 @@
                 </select>
             </div>
 
+            <div class="form-group" id="shopperReferenceGroup">
+                <label for="shopperReference">Shopper Reference</label>
+                <input type="text" id="shopperReference" placeholder="Enter a unique shopper reference" minlength="3" pattern=".{3,}" title="Must be at least 3 characters long" required>
+                <div class="field-description">A unique identifier for the shopper (e.g. email, username, or UUID). Must be at least 3 characters.</div>
+            </div>
+
             <div class="form-group checkbox">
                 <input type="checkbox" id="enableRecurring">
                 <label for="enableRecurring">Enable recurring payments</label>
-            </div>
-
-            <div class="form-group" id="shopperReferenceGroup" style="display: none;">
-                <label for="shopperReference">Shopper Reference</label>
-                <input type="text" id="shopperReference" placeholder="Enter a unique shopper reference">
             </div>
 
             <button id="pay-button" class="btn">Proceed to Payment</button>

@@ -2,9 +2,10 @@ package com.example.adyenwebdemo.controller;
 
 import com.adyen.service.exception.ApiException;
 import com.example.adyenwebdemo.model.RedirectDetailsRequest;
-import com.example.adyenwebdemo.model.RedirectDetailsResponse;
+import com.example.adyenwebdemo.model.AdyenPaymentDetailsResponse;
 import com.example.adyenwebdemo.model.PaymentRequest;
 import com.example.adyenwebdemo.model.PaymentSessionResponse;
+import com.example.adyenwebdemo.model.ThreeDSDetailsRequest;
 import com.example.adyenwebdemo.service.PaymentService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +16,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+
 import java.util.Collections;
-import java.util.UUID;
 
 @Controller
 @RequiredArgsConstructor
@@ -57,11 +59,12 @@ public class PaymentController {
                         .build();
 
                 // Submit details to Adyen
-                RedirectDetailsResponse response = paymentService.submitPaymentDetails(detailsRequest);
+                AdyenPaymentDetailsResponse response = paymentService.submitPaymentDetails(detailsRequest);
                 log.info("Payment details processed: {}", response);
 
                 // Add payment result to model
                 model.addAttribute("paymentResult", response);
+                log.info("Added payment result to model: {}", response);
 
                 // Determine where to redirect based on result code
                 if (response.getResultCode() != null) {
@@ -82,7 +85,11 @@ public class PaymentController {
             }
         }
 
-        // If no redirectResult, just show success page
+        // If no redirectResult, just show success page with empty model
+        // This will allow the client-side JavaScript to populate from sessionStorage
+        // without causing Thymeleaf errors
+        log.info("No redirectResult parameter, showing success page with client-side data");
+        model.addAttribute("paymentResult", null);
         return "success";
     }
 
@@ -110,6 +117,12 @@ public class PaymentController {
     public ResponseEntity<PaymentSessionResponse> createPaymentSession(
             @RequestBody PaymentRequest paymentRequest, 
             HttpServletRequest request) {
+        // Manual validation
+        if (paymentRequest.getShopperReference() == null || paymentRequest.getShopperReference().trim().isEmpty()) {
+            log.error("Missing required field: shopperReference");
+            return ResponseEntity.badRequest().build();
+        }
+
         try {
             log.info("Creating payment session: {}", paymentRequest);
 
@@ -137,5 +150,43 @@ public class PaymentController {
         // and process the webhook notification
         log.info("Received webhook notification: {}", payload);
         return ResponseEntity.ok(Collections.singletonMap("notificationResponse", "[accepted]"));
+    }
+
+    /**
+     * Handle payment details submission from frontend
+     * This endpoint processes the redirectResult from Adyen redirect payment methods
+     */
+    @PostMapping("/api/payments/details")
+    @ResponseBody
+    public ResponseEntity<AdyenPaymentDetailsResponse> paymentDetails(
+            @RequestBody RedirectDetailsRequest detailsRequest) {
+        try {
+            log.info("Submitting payment details: {}", detailsRequest);
+            AdyenPaymentDetailsResponse response = paymentService.submitPaymentDetails(detailsRequest);
+            log.info("Details processed with result: {}", response.getResultCode());
+            return ResponseEntity.ok(response);
+        } catch (IOException | ApiException e) {
+            log.error("Error submitting payment details", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
+     * Handle 3DS authentication details submission from frontend
+     * This endpoint processes the threeDSResult from Adyen 3DS authentication
+     */
+    @PostMapping("/api/payments/3DSDetails")
+    @ResponseBody
+    public ResponseEntity<AdyenPaymentDetailsResponse> threeDSDetails(
+            @RequestBody ThreeDSDetailsRequest detailsRequest) {
+        try {
+            log.info("Submitting 3DS details: {}", detailsRequest);
+            AdyenPaymentDetailsResponse response = paymentService.submit3DSDetails(detailsRequest);
+            log.info("3DS details processed with result: {}", response.getResultCode());
+            return ResponseEntity.ok(response);
+        } catch (IOException | ApiException e) {
+            log.error("Error submitting 3DS details", e);
+            return ResponseEntity.badRequest().build();
+        }
     }
 }

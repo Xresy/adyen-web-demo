@@ -3,6 +3,8 @@
  */
 document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
+
+    // DOM Elements
     const payButton = document.getElementById('pay-button');
     const enableRecurringCheckbox = document.getElementById('enableRecurring');
     const shopperReferenceGroup = document.getElementById('shopperReferenceGroup');
@@ -20,10 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
         handleRedirectResult(redirectResult);
     }
 
-    // Toggle shopper reference field visibility based on recurring checkbox
-    enableRecurringCheckbox.addEventListener('change', () => {
-        shopperReferenceGroup.style.display = enableRecurringCheckbox.checked ? 'block' : 'none';
-    });
+    // We now always show the shopper reference field
+    // The checkbox only controls the recurring processing model
 
     // Modal elements
     const paymentModal = document.getElementById('payment-modal');
@@ -56,14 +56,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const enableRecurring = document.getElementById('enableRecurring').checked;
             const shopperReference = document.getElementById('shopperReference').value;
 
-            // Create payment session request
+            // Validate shopper reference is provided and meets minimum length
+            if (!shopperReference) {
+                throw new Error('Shopper Reference is required');
+            }
+
+            // Adyen requires shopperReference to be at least 3 characters
+            if (shopperReference.length < 3) {
+                errorElement.textContent = 'Shopper Reference must be at least 3 characters';
+                errorElement.style.display = 'block';
+                document.getElementById('shopperReference').focus();
+                throw new Error('Shopper Reference must be at least 3 characters');
+            }
+
+            // Create payment session request - always include shopper reference
             const sessionRequest = {
                 amount: amount,
                 currency: currency,
                 countryCode: countryCode,
                 returnUrl: window.location.origin + '/success',
                 enableRecurring: enableRecurring,
-                shopperReference: enableRecurring ? shopperReference : undefined
+                shopperReference: shopperReference
             };
 
             // Call backend API to create session
@@ -76,9 +89,17 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Server response error:', response.status, errorText);
-                throw new Error(`Failed to create payment session: ${response.status}`);
+                // Try to parse the error as JSON first
+                try {
+                    const errorData = await response.json();
+                    console.error('Server response error:', response.status, errorData);
+                    throw new Error(`Failed to create payment session: ${response.status}`);
+                } catch (jsonError) {
+                    // If it's not valid JSON, handle as text
+                    const errorText = await response.text();
+                    console.error('Server response error:', response.status, errorText);
+                    throw new Error(`Failed to create payment session: ${response.status}`);
+                }
             }
 
             // Parse session data from response
@@ -125,11 +146,65 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 onAdditionalDetails: (state, component) => {
                     console.log('onAdditionalDetails', state);
-                    // Handle additional details if needed
+
+                    // Check if this is a 3DS authentication result
+                    if (state && state.data && state.data.details && state.data.details.threeDSResult) {
+                        // Submit 3DS result to our backend
+                        fetch('/api/payments/3DSDetails', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                threeDSResult: state.data.details.threeDSResult,
+                                paymentData: state.data.paymentData
+                            })
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Failed to process 3DS details');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('3DS verification complete:', data);
+                            // Make sure we have all the important data
+                            if (!data.pspReference) {
+                                console.warn('3DS response missing PSP reference');
+                            }
+                            if (!data.merchantReference) {
+                                console.warn('3DS response missing merchant reference');
+                            }
+
+                            // Store the result and handle UI updates
+                            // We store this before redirect so it's available when the success page loads
+                            sessionStorage.setItem('paymentResult', JSON.stringify(data));
+                            console.log('Stored payment result in sessionStorage before redirect');
+
+                            // For 3DS, we use client-side storage because the server doesn't have context
+                            // Redirect based on result code
+                            const resultCodeUpper = data.resultCode ? data.resultCode.toUpperCase() : '';
+                            if (resultCodeUpper === 'AUTHORISED') {
+                                console.log('Payment authorized, redirecting to success page');
+                                window.location.href = '/success';
+                            } else if (resultCodeUpper === 'PENDING' || resultCodeUpper === 'RECEIVED') {
+                                window.location.href = '/pending';
+                            } else {
+                                sessionStorage.setItem('paymentError', 'Payment failed: ' + data.resultCode);
+                                window.location.href = '/failed';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error handling 3DS details:', error);
+                            sessionStorage.setItem('paymentError', error.message || 'Error processing 3DS authentication');
+                            window.location.href = '/failed';
+                        });
+                    }
                 },
                 onPaymentCompleted: (result) => {
                     console.log('Payment completed:', result);
                     sessionStorage.setItem('paymentResult', JSON.stringify(result));
+                    console.log(sessionData);
                     paymentModal.style.display = 'none';
 
                     // Redirect based on result code - case insensitive comparison
@@ -192,46 +267,79 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Handle redirect result from Adyen redirect payment methods
      */
-    async function handleRedirectResult(redirectResult) {
+    function handleRedirectResult(redirectResult) {
         try {
             loadingElement.style.display = 'block';
             errorElement.style.display = 'none';
 
-            // Create request payload - using our RedirectDetailsRequest model
-            const detailsRequest = {
-                redirectResult: redirectResult
-            };
+            console.log('Processing redirect result');
 
-            // Submit to backend
-            const response = await fetch('/api/payments/details', {
+            // Call backend API to process the redirect result
+            fetch('/api/payments/details', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(detailsRequest)
+                body: JSON.stringify({
+                    redirectResult: redirectResult
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to process redirect result');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Redirect flow complete:', data);
+                // Make sure we have all the important data
+                if (!data.pspReference) {
+                    console.warn('Redirect response missing PSP reference');
+                }
+                if (!data.merchantReference) {
+                    console.warn('Redirect response missing merchant reference');
+                }
+                if (!data.additionalData) {
+                    console.warn('Redirect response missing additional data');
+                }
+
+                // Store the result and handle UI updates
+                // We store this before redirect so it's available when the success page loads
+                console.log('About to store payment result from redirect flow:', data);
+                console.log('Data has additionalData?', data.additionalData ? 'Yes' : 'No');
+                if (data.additionalData) {
+                    console.log('additionalData keys:', Object.keys(data.additionalData));
+                }
+
+                sessionStorage.setItem('paymentResult', JSON.stringify(data));
+                console.log('Stored payment result in sessionStorage before redirect');
+                console.log('sessionStorage content:', sessionStorage.getItem('paymentResult'));
+
+                // Verify the data was stored correctly
+                try {
+                    const stored = JSON.parse(sessionStorage.getItem('paymentResult'));
+                    console.log('Verified stored data has additionalData:', stored.additionalData ? 'Yes' : 'No');
+                } catch (e) {
+                    console.error('Error parsing stored data:', e);
+                }
+
+                // Redirect based on result code
+                const resultCodeUpper = data.resultCode ? data.resultCode.toUpperCase() : '';
+                if (resultCodeUpper === 'AUTHORISED' || resultCodeUpper === 'AUTHENTICATED') {
+                    console.log('Payment authorized, redirecting to success page');
+                    window.location.href = '/success';
+                } else if (resultCodeUpper === 'PENDING' || resultCodeUpper === 'RECEIVED') {
+                    window.location.href = '/pending';
+                } else {
+                    sessionStorage.setItem('paymentError', 'Payment failed: ' + data.resultCode);
+                    window.location.href = '/failed';
+                }
+            })
+            .catch(error => {
+                console.error('Error processing redirect result:', error);
+                showError(error.message || 'Failed to process payment redirect');
+                loadingElement.style.display = 'none';
             });
-
-            if (!response.ok) {
-                throw new Error(`Error processing redirect result: ${response.status}`);
-            }
-
-            // Get response data
-            const resultData = await response.json();
-            console.log('Payment details result:', resultData);
-
-            // Store result in session storage
-            sessionStorage.setItem('paymentResult', JSON.stringify(resultData));
-
-            // Redirect based on result - case insensitive comparison
-            const resultCodeUpper = resultData.resultCode ? resultData.resultCode.toUpperCase() : '';
-            if (resultCodeUpper === 'AUTHORISED' || resultCodeUpper === 'AUTHORISED') {
-                window.location.href = '/success';
-            } else if (resultCodeUpper === 'PENDING' || resultCodeUpper === 'RECEIVED') {
-                window.location.href = '/pending';
-            } else {
-                window.location.href = '/failed';
-            }
-
         } catch (error) {
             console.error('Error handling redirect result:', error);
             showError(error.message || 'Failed to process payment redirect');

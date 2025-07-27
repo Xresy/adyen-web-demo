@@ -6,6 +6,12 @@ body {
     color: #333;
 }
 
+.field-description {
+    font-size: 0.85em;
+    color: #6c757d;
+    margin-top: 4px;
+}
+
 .container {
     max-width: 800px;
     margin: 0 auto;
@@ -383,6 +389,12 @@ h1 {
     overflow: auto;
     background-color: rgba(0, 0, 0, 0.5);
     animation: fadeIn 0.3s;
+}
+
+.field-description {
+    font-size: 0.85em;
+    color: #6c757d;
+    margin-top: 4px;
 }
 
 .modal-content {
