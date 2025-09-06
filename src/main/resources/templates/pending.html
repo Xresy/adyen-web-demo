@@ -6,71 +6,201 @@
     <title>Payment Pending - Adyen Web Demo</title>
     <link rel="stylesheet" href="/css/styles.css">
     <style>
-        .pending-icon {
-            color: #00a1b2;
-            font-size: 64px;
+        .result-container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .flow-badge {
+            background: linear-gradient(135deg, #0abf53, #00a86b);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: inline-block;
             margin-bottom: 20px;
         }
-        .payment-details {
-            margin: 20px 0;
-            background: #f0f8ff;
-            padding: 20px;
-            border-radius: 5px;
-            border-left: 4px solid #00a1b2;
+        
+        .result-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #f7931e;
         }
+        
+        .result-details {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: left;
+        }
+        
+        .result-details h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            font-weight: 500;
+            color: #666;
+        }
+        
+        .detail-value {
+            color: #333;
+            font-family: monospace;
+        }
+        
         .payment-status {
             text-align: center;
             margin: 30px 0;
         }
+        
         .spinner {
-            border: 4px solid rgba(0, 161, 178, 0.2);
+            border: 4px solid rgba(247, 147, 30, 0.2);
             border-radius: 50%;
-            border-top: 4px solid #00a1b2;
+            border-top: 4px solid #f7931e;
             width: 40px;
             height: 40px;
             animation: spin 2s linear infinite;
             margin: 0 auto 20px auto;
         }
+        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        .actions {
+            margin-top: 30px;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 0 10px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #0abf53, #00a86b);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="pending-content">
-            <div class="pending-icon">⏳</div>
-            <h1>Payment Processing</h1>
-            <p>Your payment is being processed. Please do not close this page.</p>
+    <div class="result-container">
+        <div class="flow-badge" id="flow-badge" th:text="${paymentResult != null and paymentResult.flowType == 'advanced'} ? 'Advanced Flow' : 'Sessions Flow'">Sessions Flow</div>
+        
+        <div class="result-icon">⏳</div>
+        <h2>Payment Processing</h2>
+        <p>Your payment is being processed. Please do not close this page.</p>
 
-            <div class="payment-status">
-                <div class="spinner"></div>
-                <p>We are waiting for confirmation from your payment provider.</p>
+        <div class="payment-status">
+            <div class="spinner"></div>
+            <p>We are waiting for confirmation from your payment provider.</p>
+        </div>
+
+        <!-- Payment Details -->
+        <div class="result-details">
+            <h3>Payment Details</h3>
+            <div id="payment-details-container">
+                <!-- Server-side data rows -->
+                <div class="detail-row" th:if="${paymentResult != null and paymentResult.resultCode != null}">
+                    <span class="detail-label">Status:</span>
+                    <span class="detail-value" th:text="${paymentResult.resultCode}">PENDING</span>
+                </div>
+                <div class="detail-row" th:if="${paymentResult != null and paymentResult.pspReference != null}">
+                    <span class="detail-label">PSP Reference:</span>
+                    <span class="detail-value" th:text="${paymentResult.pspReference}">8123456789012345</span>
+                </div>
+                <div class="detail-row" th:if="${paymentResult != null and paymentResult.merchantReference != null}">
+                    <span class="detail-label">Merchant Reference:</span>
+                    <span class="detail-value" th:text="${paymentResult.merchantReference}">Order-123456</span>
+                </div>
+                <!-- Client-side data will be added here by JavaScript -->
             </div>
+        </div>
 
-            <!-- Payment Details -->
-            <div class="payment-details" th:if="${paymentResult != null}">
-                <h2>Payment Details</h2>
-                <table>
-                    <tr>
-                        <td><strong>Status:</strong></td>
-                        <td th:text="${paymentResult.resultCode}">PENDING</td>
-                    </tr>
-                    <tr>
-                        <td><strong>PSP Reference:</strong></td>
-                        <td th:text="${paymentResult.pspReference}">8123456789012345</td>
-                    </tr>
-                    <tr th:if="${paymentResult.merchantReference != null}">
-                        <td><strong>Merchant Reference:</strong></td>
-                        <td th:text="${paymentResult.merchantReference}">Order-123456</td>
-                    </tr>
-                </table>
-            </div>
-
-            <p>You will receive a confirmation when the payment is complete.</p>
+        <p>You will receive a confirmation when the payment is complete.</p>
+        
+        <div class="actions">
             <a href="/" class="btn">Return to Homepage</a>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check for client-side pending payment data
+            const storedPending = sessionStorage.getItem('pendingPayment');
+            const container = document.getElementById('payment-details-container');
+            const flowBadge = document.getElementById('flow-badge');
+            
+            if (storedPending && (!container.querySelectorAll('.detail-row').length)) {
+                try {
+                    const pendingData = JSON.parse(storedPending);
+                    
+                    // Display basic payment information
+                    if (pendingData.resultCode) {
+                        addDetailRow(container, 'Status', pendingData.resultCode);
+                    }
+                    if (pendingData.pspReference) {
+                        addDetailRow(container, 'PSP Reference', pendingData.pspReference);
+                    }
+                    if (pendingData.merchantReference) {
+                        addDetailRow(container, 'Merchant Reference', pendingData.merchantReference);
+                    }
+                    
+                    // Add flow type
+                    let flowType = 'Sessions Flow';
+                    if (pendingData && pendingData.flowType === 'advanced') {
+                        flowType = 'Advanced Flow';
+                        flowBadge.textContent = 'Advanced Flow';
+                    }
+                    addDetailRow(container, 'Flow Type', flowType);
+                    
+                    // Clear storage after using it
+                    sessionStorage.removeItem('pendingPayment');
+                } catch (err) {
+                    console.error('Error parsing pending payment result:', err);
+                }
+            }
+            
+            // Check for server-side flow type (for redirect flows)
+            const serverFlowType = /*[[${paymentResult?.flowType}]]*/ null;
+            if (serverFlowType === 'advanced') {
+                flowBadge.textContent = 'Advanced Flow';
+            }
+        });
+        
+        // Helper function to add a detail row
+        function addDetailRow(container, label, value) {
+            const row = document.createElement('div');
+            row.className = 'detail-row';
+            row.innerHTML = `
+                <span class="detail-label">${label}:</span>
+                <span class="detail-value">${value}</span>
+            `;
+            container.appendChild(row);
+        }
+    </script>
 </body>
 </html>

@@ -3,7 +3,7 @@ package com.example.adyenwebdemo.model;
 import lombok.Data;
 
 @Data
-public class PaymentRequest {
+public class SessionsFlowRequest {
     private Integer amount;
     private String currency;
     private String countryCode;

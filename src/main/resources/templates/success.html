@@ -6,125 +6,211 @@
     <title>Payment Successful - Adyen Web Demo</title>
     <link rel="stylesheet" href="/css/styles.css">
     <style>
-        .success-icon {
-            color: #0abf53;
-            font-size: 64px;
+        .result-container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .flow-badge {
+            background: linear-gradient(135deg, #0abf53, #00a86b);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: inline-block;
             margin-bottom: 20px;
         }
-        .payment-details {
-            margin: 20px 0;
-            background: #f8f9fa;
+        
+        .result-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #0abf53;
+        }
+        
+        .result-details {
+            background: white;
+            border-radius: 8px;
             padding: 20px;
-            border-radius: 5px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: left;
         }
-        .payment-details table {
-            width: 100%;
+        
+        .result-details h3 {
+            margin-top: 0;
+            color: #333;
         }
-        .payment-details td {
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
             padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            font-weight: 500;
+            color: #666;
+        }
+        
+        .detail-value {
+            color: #333;
+            font-family: monospace;
+        }
+        
+        .actions {
+            margin-top: 30px;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 0 10px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #0abf53, #00a86b);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="success-content">
-            <div class="success-icon">✓</div>
-            <h1>Payment Successful</h1>
-            <p>Your payment has been processed successfully!</p>
+    <div class="result-container">
+        <div class="flow-badge" id="flow-badge" th:text="${paymentResult != null and paymentResult.flowType == 'advanced'} ? 'Advanced Flow' : 'Sessions Flow'">Sessions Flow</div>
+        
+        <div class="result-icon">✅</div>
+        <h2>Payment Successful!</h2>
+        <p>Your payment has been processed successfully.</p>
 
-            <!-- Payment Result Details -->
-            <div class="payment-details">
-                <h2>Payment Details</h2>
-                <table id="payment-details-table">
-                    <!-- These rows will be shown only if paymentResult exists on server side -->
-                    <tr th:if="${paymentResult != null and paymentResult.resultCode != null}">
-                        <td><strong>Result Code:</strong></td>
-                        <td th:text="${paymentResult.resultCode}">AUTHORISED</td>
-                    </tr>
-                    <tr th:if="${paymentResult != null and paymentResult.pspReference != null}">
-                        <td><strong>PSP Reference:</strong></td>
-                        <td th:text="${paymentResult.pspReference}">8123456789012345</td>
-                    </tr>
-                    <tr th:if="${paymentResult != null and paymentResult.merchantReference != null}">
-                        <td><strong>Merchant Reference:</strong></td>
-                        <td th:text="${paymentResult.merchantReference}">Order-123456</td>
-                    </tr>
-                    <!-- If no server-side data, the table will be empty and filled by JavaScript -->
-                </table>
-
-                <!-- Direct script to handle payment details display -->
-                <script th:inline="javascript">
-                    document.addEventListener('DOMContentLoaded', function() {
-                        // Get payment data - first try server-side, then sessionStorage
-                        const serverData = /*[[${paymentResult}]]*/ null;
-                        const table = document.getElementById('payment-details-table');
-                        let paymentData = serverData;
-
-                        // Display additional data from server-side model if present
-                        if (serverData && serverData.additionalData) {
-                            displayAdditionalData(serverData.additionalData, table);
-                        }
-
-                        // If no server data present, try sessionStorage
-                        if (!table.querySelectorAll('tr').length) {
-                            const storedResult = sessionStorage.getItem('paymentResult');
-                            if (storedResult) {
-                                try {
-                                    paymentData = JSON.parse(storedResult);
-
-                                    // Display basic payment information
-                                    displayBasicPaymentInfo(paymentData, table);
-
-                                    // Display any additional data
-                                    if (paymentData.additionalData) {
-                                        displayAdditionalData(paymentData.additionalData, table);
-                                    }
-
-                                    // Clear storage after using it
-                                    sessionStorage.removeItem('paymentResult');
-                                } catch (err) {
-                                    console.error('Error parsing payment result:', err);
-                                }
-                            }
-                        }
-                    });
-
-                    // Helper function to display basic payment info
-                    function displayBasicPaymentInfo(data, table) {
-                        if (data.resultCode) {
-                            addTableRow(table, 'Result Code', data.resultCode);
-                        }
-                        if (data.pspReference) {
-                            addTableRow(table, 'PSP Reference', data.pspReference);
-                        }
-                        if (data.merchantReference) {
-                            addTableRow(table, 'Merchant Reference', data.merchantReference);
-                        }
-                    }
-
-                    // Helper function to display additional data
-                    function displayAdditionalData(additionalData, table) {
-                        for (const [key, value] of Object.entries(additionalData)) {
-                            if (key && value) {
-                                addTableRow(table, key, value);
-                            }
-                        }
-                    }
-
-                    // Helper function to add a table row
-                    function addTableRow(table, label, value) {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td><strong>${label}:</strong></td>
-                            <td>${value}</td>
-                        `;
-                        table.appendChild(row);
-                    }
-                </script>
+        <!-- Payment Result Details -->
+        <div class="result-details">
+            <h3>Payment Details</h3>
+            <div id="payment-details-container">
+                <!-- Server-side data rows -->
+                <div class="detail-row" th:if="${paymentResult != null and paymentResult.resultCode != null}">
+                    <span class="detail-label">Result Code:</span>
+                    <span class="detail-value" th:text="${paymentResult.resultCode}">AUTHORISED</span>
+                </div>
+                <div class="detail-row" th:if="${paymentResult != null and paymentResult.pspReference != null}">
+                    <span class="detail-label">PSP Reference:</span>
+                    <span class="detail-value" th:text="${paymentResult.pspReference}">8123456789012345</span>
+                </div>
+                <div class="detail-row" th:if="${paymentResult != null and paymentResult.merchantReference != null}">
+                    <span class="detail-label">Merchant Reference:</span>
+                    <span class="detail-value" th:text="${paymentResult.merchantReference}">Order-123456</span>
+                </div>
+                <!-- Client-side data will be added here by JavaScript -->
             </div>
 
+        </div>
+
+        <div class="actions">
             <a href="/" class="btn">Return to Homepage</a>
         </div>
     </div>
+
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get payment data - first try server-side, then sessionStorage
+            const serverData = /*[[${paymentResult}]]*/ null;
+            const container = document.getElementById('payment-details-container');
+            const flowBadge = document.getElementById('flow-badge');
+            let paymentData = serverData;
+
+            // Display additional data from server-side model if present
+            if (serverData && serverData.additionalData) {
+                displayAdditionalData(serverData.additionalData, container);
+            }
+
+            // If no server data present or only basic server data, try sessionStorage for additional details
+            const hasServerData = serverData && (serverData.pspReference || serverData.merchantReference || serverData.additionalData);
+            if (!hasServerData) {
+                const storedResult = sessionStorage.getItem('paymentResult');
+                if (storedResult) {
+                    try {
+                        paymentData = JSON.parse(storedResult);
+
+                        // Display basic payment information
+                        displayBasicPaymentInfo(paymentData, container);
+
+                        // Display any additional data
+                        if (paymentData.additionalData) {
+                            displayAdditionalData(paymentData.additionalData, container);
+                        }
+
+                        // Clear storage after using it
+                        sessionStorage.removeItem('paymentResult');
+                    } catch (err) {
+                        console.error('Error parsing payment result:', err);
+                    }
+                }
+            }
+
+            // Update flow badge based on data
+            if (paymentData && paymentData.flowType === 'advanced') {
+                flowBadge.textContent = 'Advanced Flow';
+            }
+            
+            // Check for server-side flow type (for redirect flows)
+            const serverFlowType = /*[[${paymentResult?.flowType}]]*/ null;
+            if (serverFlowType === 'advanced') {
+                flowBadge.textContent = 'Advanced Flow';
+            }
+        });
+
+        // Helper function to display basic payment info
+        function displayBasicPaymentInfo(data, container) {
+            if (data.resultCode) {
+                addDetailRow(container, 'Result Code', data.resultCode);
+            }
+            if (data.pspReference) {
+                addDetailRow(container, 'PSP Reference', data.pspReference);
+            }
+            if (data.merchantReference) {
+                addDetailRow(container, 'Merchant Reference', data.merchantReference);
+            }
+            
+            // Add flow type based on stored data
+            let flowType = 'Sessions Flow'; // Default
+            if (data && data.flowType === 'advanced') {
+                flowType = 'Advanced Flow';
+            } else if (data && data.flowType === 'sessions') {
+                flowType = 'Sessions Flow';
+            }
+            addDetailRow(container, 'Flow Type', flowType);
+        }
+
+        // Helper function to display additional data
+        function displayAdditionalData(additionalData, container) {
+            for (const [key, value] of Object.entries(additionalData)) {
+                if (key && value) {
+                    addDetailRow(container, key, value);
+                }
+            }
+        }
+
+        // Helper function to add a detail row
+        function addDetailRow(container, label, value) {
+            const row = document.createElement('div');
+            row.className = 'detail-row';
+            row.innerHTML = `
+                <span class="detail-label">${label}:</span>
+                <span class="detail-value">${value}</span>
+            `;
+            container.appendChild(row);
+        }
+    </script>
 </body>
 </html>

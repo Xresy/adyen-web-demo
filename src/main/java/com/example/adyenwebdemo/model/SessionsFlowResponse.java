@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class PaymentSessionResponse {
+public class SessionsFlowResponse {
     private String sessionId;
     private String sessionData;
     private String clientKey;

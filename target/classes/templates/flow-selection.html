@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adyen Integration Demo - Flow Selection</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .flow-selection-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        
+        .flow-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 40px;
+        }
+        
+        .flow-card {
+            background: white;
+            border: 2px solid #e6e6e6;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .flow-card:hover {
+            border-color: #0abf53;
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(10, 191, 83, 0.15);
+        }
+        
+        .flow-card h3 {
+            color: #0abf53;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+        
+        .flow-card p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .flow-card .features {
+            text-align: left;
+            margin: 20px 0;
+        }
+        
+        .flow-card .features li {
+            margin: 8px 0;
+            color: #555;
+        }
+        
+        .flow-btn {
+            background: #0abf53;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .flow-btn:hover {
+            background: #089942;
+        }
+        
+        .header-section {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .header-section h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .header-section p {
+            color: #666;
+            font-size: 18px;
+        }
+        
+        .comparison-table {
+            margin-top: 40px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .comparison-table h3 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .comparison-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .comparison-table th,
+        .comparison-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .comparison-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .comparison-table .feature {
+            font-weight: 500;
+        }
+        
+        .comparison-table .sessions {
+            color: #0abf53;
+        }
+        
+        .comparison-table .advanced {
+            color: #ff6b35;
+        }
+    </style>
+</head>
+<body>
+    <div class="flow-selection-container">
+        <div class="header-section">
+            <h1>Adyen Integration Demo</h1>
+            <p>Choose your integration approach to explore different payment flows</p>
+        </div>
+        
+        <div class="flow-cards">
+            <div class="flow-card" onclick="window.location.href='/sessions'">
+                <h3>Sessions Flow</h3>
+                <p>Simplified integration using Adyen's hosted checkout sessions</p>
+                <ul class="features">
+                    <li>✅ Quick setup with minimal code</li>
+                    <li>✅ Adyen handles payment method rendering</li>
+                    <li>✅ Built-in security and compliance</li>
+                    <li>✅ Automatic 3DS and redirect handling</li>
+                    <li>✅ Drop-in component with all payment methods</li>
+                </ul>
+                <a href="/sessions" class="flow-btn">Try Sessions Flow</a>
+            </div>
+            
+            <div class="flow-card" onclick="window.location.href='/advanced'">
+                <h3>Advanced Flow</h3>
+                <p>Full control over payment experience with direct API integration</p>
+                <ul class="features">
+                    <li>🔧 Complete customization control</li>
+                    <li>🔧 Individual payment method components</li>
+                    <li>🔧 Custom payment method selection</li>
+                    <li>🔧 Manual 3DS and redirect handling</li>
+                    <li>🔧 Direct /payments API calls</li>
+                </ul>
+                <a href="/advanced" class="flow-btn">Try Advanced Flow</a>
+            </div>
+        </div>
+        
+    </div>
+</body>
+</html>

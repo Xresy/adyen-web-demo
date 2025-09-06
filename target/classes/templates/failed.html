@@ -6,75 +6,198 @@
     <title>Payment Failed - Adyen Web Demo</title>
     <link rel="stylesheet" href="/css/styles.css">
     <style>
-        .failed-icon {
-            color: #d10244;
-            font-size: 64px;
+        .result-container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .flow-badge {
+            background: linear-gradient(135deg, #0abf53, #00a86b);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: inline-block;
             margin-bottom: 20px;
         }
-        .error-details {
-            margin: 20px 0;
-            background: #fff0f0;
+        
+        .result-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #d32f2f;
+        }
+        
+        .result-details {
+            background: white;
+            border-radius: 8px;
             padding: 20px;
-            border-radius: 5px;
-            border-left: 4px solid #d10244;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: left;
+        }
+        
+        .result-details h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            font-weight: 500;
+            color: #666;
+        }
+        
+        .detail-value {
+            color: #333;
+            font-family: monospace;
+        }
+        
+        .error-details {
+            background: #fff0f0;
+            border-left: 4px solid #d32f2f;
+        }
+        
+        .actions {
+            margin-top: 30px;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 0 10px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #0abf53, #00a86b);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #666;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="failed-content">
-            <div class="failed-icon">✕</div>
-            <h1>Payment Failed</h1>
-            <p>We were unable to process your payment.</p>
+    <div class="result-container">
+        <div class="flow-badge" id="flow-badge" th:text="${paymentResult != null and paymentResult.flowType == 'advanced'} ? 'Advanced Flow' : 'Sessions Flow'">Sessions Flow</div>
+        
+        <div class="result-icon">❌</div>
+        <h2>Payment Failed</h2>
+        <p>We were unable to process your payment.</p>
 
-            <!-- Server-side Error Details -->
-            <div class="error-details" th:if="${error != null}">
-                <h2>Error Details</h2>
-                <p th:text="${error}">Error message will appear here</p>
+        <!-- Server-side Error Details -->
+        <div class="result-details error-details" th:if="${error != null}">
+            <h3>Error Details</h3>
+            <div class="detail-row">
+                <span class="detail-label">Error:</span>
+                <span class="detail-value" th:text="${error}">Error message will appear here</span>
             </div>
+        </div>
 
-            <!-- Server-side Payment Result -->
-            <div class="error-details" th:if="${paymentResult != null}">
-                <h2>Payment Result</h2>
-                <p><strong>Result Code:</strong> <span th:text="${paymentResult.resultCode}">REFUSED</span></p>
-                <p th:if="${paymentResult.pspReference != null}">
-                    <strong>PSP Reference:</strong> <span th:text="${paymentResult.pspReference}">8123456789012345</span>
-                </p>
+        <!-- Server-side Payment Result -->
+        <div class="result-details" th:if="${paymentResult != null}">
+            <h3>Payment Details</h3>
+            <div class="detail-row">
+                <span class="detail-label">Result Code:</span>
+                <span class="detail-value" th:text="${paymentResult.resultCode}">REFUSED</span>
             </div>
-
-            <!-- Client-side Error Details (shown only if no server-side details) -->
-            <div id="client-error" class="error-details" style="display: none;">
-                <h2>Error Details</h2>
-                <p id="client-error-message"></p>
+            <div class="detail-row" th:if="${paymentResult.pspReference != null}">
+                <span class="detail-label">PSP Reference:</span>
+                <span class="detail-value" th:text="${paymentResult.pspReference}">8123456789012345</span>
             </div>
+        </div>
 
-            <a href="/" class="btn">Try Again</a>
+        <!-- Client-side Error Details (shown only if no server-side details) -->
+        <div id="client-error" class="result-details error-details" style="display: none;">
+            <h3>Error Details</h3>
+            <div id="payment-details-container">
+                <!-- Client-side data will be added here by JavaScript -->
+            </div>
+        </div>
+
+        <div class="actions">
+            <a href="/" class="btn btn-primary">Try Again</a>
+            <a href="/" class="btn btn-secondary">Back to Flow Selection</a>
         </div>
     </div>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
+        const container = document.getElementById('payment-details-container');
+        const clientError = document.getElementById('client-error');
+        const flowBadge = document.getElementById('flow-badge');
+        
         // Check if we have server-side error details
-        const hasServerError = document.querySelector('.error-details') !== null;
+        const hasServerError = document.querySelector('.result-details:not(#client-error)') !== null;
 
         // If no server-side error, check for client-side error
         if (!hasServerError) {
             const storedError = sessionStorage.getItem('paymentError');
             if (storedError) {
-                const clientError = document.getElementById('client-error');
-                const clientErrorMessage = document.getElementById('client-error-message');
-
-                clientErrorMessage.textContent = storedError;
+                // Add error message as detail row
+                addDetailRow(container, 'Error', storedError);
                 clientError.style.display = 'block';
 
                 // Clear the error from session storage
                 sessionStorage.removeItem('paymentError');
             }
         }
+        
+        // Check for flow type in stored data or server-side data
+        const storedResult = sessionStorage.getItem('paymentResult');
+        if (storedResult) {
+            try {
+                const resultData = JSON.parse(storedResult);
+                if (resultData && resultData.flowType === 'advanced') {
+                    flowBadge.textContent = 'Advanced Flow';
+                }
+            } catch (err) {
+                console.error('Error parsing payment result:', err);
+            }
+        }
+        
+        // Check for server-side flow type (for redirect flows)
+        const serverFlowType = /*[[${paymentResult != null ? paymentResult.flowType : null}]]*/ null;
+        if (serverFlowType === 'advanced') {
+            flowBadge.textContent = 'Advanced Flow';
+        }
 
         // Always clear payment result from session storage
         sessionStorage.removeItem('paymentResult');
     });
+    
+    // Helper function to add a detail row
+    function addDetailRow(container, label, value) {
+        const row = document.createElement('div');
+        row.className = 'detail-row';
+        row.innerHTML = `
+            <span class="detail-label">${label}:</span>
+            <span class="detail-value">${value}</span>
+        `;
+        container.appendChild(row);
+    }
     </script>
 </body>
 </html>

@@ -138,12 +138,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 },
-                onRedirect: (data, component) => {
-                    console.log('onRedirect', data);
-                    // Close the modal when redirecting
-                    paymentModal.style.display = 'none';
-                    // Most redirect methods use window.location, handled by the SDK
-                },
                 onAdditionalDetails: (state, component) => {
                     console.log('onAdditionalDetails', state);
 
@@ -178,6 +172,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                             // Store the result and handle UI updates
                             // We store this before redirect so it's available when the success page loads
+                            // Add flow type identifier for Sessions Flow
+                            data.flowType = 'sessions';
                             sessionStorage.setItem('paymentResult', JSON.stringify(data));
                             console.log('Stored payment result in sessionStorage before redirect');
 
@@ -203,34 +199,93 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 onPaymentCompleted: (result) => {
                     console.log('Payment completed:', result);
-                    sessionStorage.setItem('paymentResult', JSON.stringify(result));
-                    console.log(sessionData);
                     paymentModal.style.display = 'none';
 
-                    // Redirect based on result code - case insensitive comparison
-                    const resultCodeUpper = result.resultCode ? result.resultCode.toUpperCase() : '';
-                    if (resultCodeUpper === 'AUTHORISED') {
+                    // Get full payment details from backend using session result
+                    fetch('/api/sessions/result', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            sessionId: sessionData.sessionId,
+                            sessionResult: result.sessionResult
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to get session result');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Full session result retrieved:', data);
+                        // Add flow type identifier for Sessions Flow
+                        data.flowType = 'sessions';
+                        sessionStorage.setItem('paymentResult', JSON.stringify(data));
+
+                        // Redirect based on result code
+                        const resultCodeUpper = data.resultCode ? data.resultCode.toUpperCase() : '';
+                        if (resultCodeUpper === 'AUTHORISED') {
+                            window.location.href = '/success';
+                        } else if (resultCodeUpper === 'PENDING' || resultCodeUpper === 'RECEIVED') {
+                            data.flowType = 'sessions';
+                            sessionStorage.setItem('pendingPayment', JSON.stringify(data));
+                            window.location.href = '/pending';
+                        } else {
+                            sessionStorage.setItem('paymentError', 'Payment failed: ' + data.resultCode);
+                            window.location.href = '/failed';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error getting session result:', error);
+                        // Fallback to using limited frontend data
+                        result.flowType = 'sessions';
+                        sessionStorage.setItem('paymentResult', JSON.stringify(result));
                         window.location.href = '/success';
-                    } else if (resultCodeUpper === 'PENDING' || resultCodeUpper === 'RECEIVED') {
-                        // Store pending info for pending page
-                        sessionStorage.setItem('pendingPayment', JSON.stringify(result));
-                        window.location.href = '/pending';
-                    } else {
-                        // Store error message for failed page
-                        sessionStorage.setItem('paymentError', 'Payment failed: ' + result.resultCode);
-                        window.location.href = '/failed';
-                    }
+                    });
                 },
                 onPaymentFailed: (result, component) => {
                     console.error('Payment failed:', result);
                     paymentModal.style.display = 'none';
 
-                    // Store details for failed page
-                    sessionStorage.setItem('paymentError', 'Payment failed: ' + 
-                        (result.resultCode || result.refusalReason || 'Unknown reason'));
-
-                    // Redirect to failed page
-                    window.location.href = '/failed';
+                    // Get full payment details from backend using session result if available
+                    if (result.sessionResult && sessionData.sessionId) {
+                        fetch('/api/sessions/result', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                sessionId: sessionData.sessionId,
+                                sessionResult: result.sessionResult
+                            })
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Failed to get session result');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('Full session result retrieved for failed payment:', data);
+                            data.flowType = 'sessions';
+                            sessionStorage.setItem('paymentResult', JSON.stringify(data));
+                            window.location.href = '/failed';
+                        })
+                        .catch(error => {
+                            console.error('Error getting session result for failed payment:', error);
+                            // Fallback to using limited frontend data
+                            sessionStorage.setItem('paymentError', 'Payment failed: ' + 
+                                (result.resultCode || result.refusalReason || 'Unknown reason'));
+                            window.location.href = '/failed';
+                        });
+                    } else {
+                        // No session result available, use frontend data
+                        sessionStorage.setItem('paymentError', 'Payment failed: ' + 
+                            (result.resultCode || result.refusalReason || 'Unknown reason'));
+                        window.location.href = '/failed';
+                    }
                 },
                 onError: (error) => {
                     console.error('Payment error:', error);
@@ -311,6 +366,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('additionalData keys:', Object.keys(data.additionalData));
                 }
 
+                // Add flow type identifier for Sessions Flow
+                data.flowType = 'sessions';
                 sessionStorage.setItem('paymentResult', JSON.stringify(data));
                 console.log('Stored payment result in sessionStorage before redirect');
                 console.log('sessionStorage content:', sessionStorage.getItem('paymentResult'));
