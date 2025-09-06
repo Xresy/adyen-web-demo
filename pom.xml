@@ -13,7 +13,7 @@
     <artifactId>adyen-web-demo</artifactId>
     <version>1.2.0</version>
     <name>adyen-web-demo</name>
-    <description>Demo project for Adyen Web integration using /sessions flow</description>
+    <description>Demo project for Adyen Web integration with Sessions and Advanced flows</description>
 
     <properties>
         <java.version>17</java.version>
